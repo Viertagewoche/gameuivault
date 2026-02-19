@@ -1,9 +1,8 @@
 // gameuivault - Main Bundle
-// Version: 1.0.2
-
+// Version: 1.0.5
 
 // ================================
-// ACCORDION FUNCTION
+// CONFIGURATION - Adjust as needed
 // ================================
 const CONFIG = {
   buttonClass: '.filter_accordion_button',
@@ -14,6 +13,10 @@ const CONFIG = {
 };
 // ================================
 
+
+// ================================
+// ACCORDION
+// ================================
 document.addEventListener('DOMContentLoaded', function () {
   const accordionButtons = document.querySelectorAll(CONFIG.buttonClass);
   accordionButtons.forEach(function (button, index) {
@@ -49,11 +52,9 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-
 // ================================
-// SEARCH FUNCTION
+// SEARCH
 // ================================
-<script>
 (function () {
   const trigger     = document.getElementById('search-trigger');
   const modal       = document.getElementById('search-modal');
@@ -63,7 +64,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const loading     = document.getElementById('search-loading');
   const list        = document.querySelector('[fs-list-instance="search"]');
 
-  // Get scrollbar width
   function getScrollbarWidth() {
     return window.innerWidth - document.documentElement.clientWidth;
   }
@@ -86,8 +86,6 @@ document.addEventListener('DOMContentLoaded', function () {
     loading.style.display = 'none';
   }
 
-  // Show/hide loading state via MutationObserver
-  // FS adds/removes fs-loading class on the list element
   const observer = new MutationObserver(() => {
     if (list.classList.contains('fs-loading')) {
       loading.style.display = 'flex';
@@ -100,32 +98,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
   observer.observe(list, { attributes: true, attributeFilter: ['class'] });
 
-  // Open modal
   trigger.addEventListener('click', openModal);
 
-  // Close modal on ESC key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
   });
 
-  // Close modal on outside click
   backdrop.addEventListener('click', closeModal);
 
-  // Show results only after 2 characters
   input.addEventListener('input', () => {
     resultsWrap.style.display =
       input.value.trim().length >= 2 ? 'block' : 'none';
   });
-
 })();
-</script>
-
 
 
 // ================================
-// LIGHTBOX FUNCTION
+// LIGHTBOX
 // ================================
-<script>
 (function () {
   let currentIndex = -1;
   let items = [];
@@ -191,17 +181,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const lb = items[currentIndex];
     lb.style.display = 'block';
 
-    // Update URL with current slug
     const slug = getSlugForIndex(index);
     setUrlSlug(slug);
 
-    // Compensate scrollbar width to prevent layout shift
     const scrollbarWidth = getScrollbarWidth();
     document.body.style.overflow = 'hidden';
     document.body.style.paddingRight = scrollbarWidth + 'px';
 
     if (animate) {
-      // Animate in: backdrop fade + container scale
       const container = lb.querySelector('.lightobx_container');
       lb.style.opacity = '0';
       if (container) {
@@ -230,10 +217,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const lb = items[currentIndex];
     const container = lb?.querySelector('.lightobx_container');
 
-    // Remove slug from URL
     setUrlSlug(null);
 
-    // Animate out: backdrop fade + container scale down
     if (lb) {
       lb.style.transition = 'opacity 200ms ease';
       lb.style.opacity = '0';
@@ -268,7 +253,6 @@ document.addEventListener('DOMContentLoaded', function () {
     getItems();
     if (currentIndex === -1) return;
     const next = currentIndex + direction;
-    // Navigate without animation
     if (next >= 0 && next < items.length) openLightbox(next, false);
   }
 
@@ -284,13 +268,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (currentIndex === -1) return 'screenshot.png';
     getItems();
     const lb = items[currentIndex];
-
     const screenshotName = lb.querySelector('.lightbox-title_text')?.textContent.trim() || 'Screenshot';
     const gameName = lb.querySelector('.lightbox-game-title')?.textContent.trim() || '';
-
-    // Remove special characters and replace spaces with hyphens
     const sanitize = str => str.replace(/[^a-zA-Z0-9äöüÄÖÜß\s-]/g, '').trim().replace(/\s+/g, '-');
-
     return gameName
       ? `${sanitize(screenshotName)}_${sanitize(gameName)}.png`
       : `${sanitize(screenshotName)}.png`;
@@ -350,11 +330,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // Try to open lightbox from URL – called after every render event
   function tryOpenFromUrl() {
     const slug = new URL(window.location.href).searchParams.get('screenshot');
     if (!slug || urlOpenDone) return;
-
     const index = findIndexBySlug(slug);
     if (index !== -1) {
       urlOpenDone = true;
@@ -362,41 +340,32 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // Initial poll for cases where Finsweet hasn't fired yet
   function pollForSlug() {
     const slug = new URL(window.location.href).searchParams.get('screenshot');
     if (!slug) return;
-
     let attempts = 0;
     const maxAttempts = 20;
-
     function attempt() {
       if (urlOpenDone) return;
-
       const index = findIndexBySlug(slug);
       if (index !== -1) {
         urlOpenDone = true;
         openLightbox(index, true);
         return;
       }
-
       attempts++;
       if (attempts < maxAttempts) {
         setTimeout(attempt, 500);
-
-        // Click Finsweet load more button if item hasn't appeared yet
         if (attempts === 2) {
           const loadMoreBtn = document.querySelector('[fs-cmsload-element="load-more"]');
           if (loadMoreBtn) loadMoreBtn.click();
         }
       }
     }
-
     attempt();
   }
 
   document.addEventListener('click', function (e) {
-    // Handle action buttons (Download & Copy)
     const actionBtn = e.target.closest('[data-lightbox-action]');
     if (actionBtn) {
       const action = actionBtn.getAttribute('data-lightbox-action');
@@ -404,14 +373,10 @@ document.addEventListener('DOMContentLoaded', function () {
       if (action === 'copy') copyImage();
       return;
     }
-
-    // Close via close button
     if (e.target.closest('.lightbox_close-button')) {
       closeLightbox();
       return;
     }
-
-    // Open lightbox via .screenshot-card_component (with animation)
     const trigger = e.target.closest('.screenshot-card_component');
     if (trigger) {
       e.preventDefault();
@@ -421,21 +386,17 @@ document.addEventListener('DOMContentLoaded', function () {
       if (index !== -1) openLightbox(index, true);
       return;
     }
-
-    // Close when clicking outside of .lightobx_container
     if (currentIndex !== -1 && !suppressClose && !isClosing) {
       const clickedInsideContainer = e.target.closest('.lightobx_container');
       if (!clickedInsideContainer) closeLightbox();
     }
   });
 
-  // Close on scroll attempt (mouse/trackpad)
   window.addEventListener('wheel', function () {
     if (currentIndex === -1 || isClosing) return;
     closeLightbox();
   }, { passive: true });
 
-  // Close on scroll attempt (touch)
   let touchStartY = 0;
   window.addEventListener('touchstart', function (e) {
     touchStartY = e.touches[0].clientY;
@@ -446,7 +407,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (Math.abs(e.touches[0].clientY - touchStartY) > 20) closeLightbox();
   }, { passive: true });
 
-  // ESC to close, arrow keys to navigate
   document.addEventListener('keydown', function (e) {
     if (currentIndex === -1 || isClosing) return;
     if (e.key === 'Escape') closeLightbox();
@@ -454,7 +414,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'ArrowLeft') navigate(-1);
   });
 
-  // Finsweet CMS Load v2 – re-check after every render (load & filter)
   window.fsAttributes = window.fsAttributes || [];
   window.fsAttributes.push([
     'cmsload',
@@ -467,7 +426,6 @@ document.addEventListener('DOMContentLoaded', function () {
     },
   ]);
 
-  // Finsweet CMS Filter v2 – re-check after filter is applied
   window.fsAttributes.push([
     'cmsfilter',
     function (filterInstances) {
@@ -479,12 +437,9 @@ document.addEventListener('DOMContentLoaded', function () {
     },
   ]);
 
-  // Init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', pollForSlug);
   } else {
     pollForSlug();
   }
-
 })();
-</script>
