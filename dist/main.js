@@ -47,3 +47,75 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+
+
+
+// ================================
+// SEARCH FUNCTION
+// ================================
+<script>
+(function () {
+  const trigger     = document.getElementById('search-trigger');
+  const modal       = document.getElementById('search-modal');
+  const backdrop    = document.getElementById('search-backdrop');
+  const input       = document.getElementById('search-input');
+  const resultsWrap = document.getElementById('search-results');
+  const loading     = document.getElementById('search-loading');
+  const list        = document.querySelector('[fs-list-instance="search"]');
+
+  // Get scrollbar width
+  function getScrollbarWidth() {
+    return window.innerWidth - document.documentElement.clientWidth;
+  }
+
+  function openModal() {
+    const scrollbarWidth = getScrollbarWidth();
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = scrollbarWidth + 'px';
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 50);
+  }
+
+  function closeModal() {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    resultsWrap.style.display = 'none';
+    loading.style.display = 'none';
+  }
+
+  // Show/hide loading state via MutationObserver
+  // FS adds/removes fs-loading class on the list element
+  const observer = new MutationObserver(() => {
+    if (list.classList.contains('fs-loading')) {
+      loading.style.display = 'flex';
+      list.style.display = 'none';
+    } else {
+      loading.style.display = 'none';
+      list.style.display = 'block';
+    }
+  });
+
+  observer.observe(list, { attributes: true, attributeFilter: ['class'] });
+
+  // Open modal
+  trigger.addEventListener('click', openModal);
+
+  // Close modal on ESC key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+  });
+
+  // Close modal on outside click
+  backdrop.addEventListener('click', closeModal);
+
+  // Show results only after 2 characters
+  input.addEventListener('input', () => {
+    resultsWrap.style.display =
+      input.value.trim().length >= 2 ? 'block' : 'none';
+  });
+
+})();
+</script>
