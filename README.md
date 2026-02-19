@@ -1,2 +1,2 @@
 # gameuivault
-Custom scripts for GameUIVault Webflow project
+Custom scripts for gameuivault
