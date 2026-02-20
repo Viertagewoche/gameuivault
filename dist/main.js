@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.0.6
+// Version: 1.0.7
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -53,11 +53,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 // ================================
-// FILTER SIDEBAR
+// FILTER SIDEBAR (Mobile only)
 // ================================
 (function () {
   const TRANSITION_MS = 300;
   const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+  const MOBILE_BREAKPOINT = 991; // Webflow's tablet breakpoint
+
+  function isMobile() {
+    return window.innerWidth <= MOBILE_BREAKPOINT;
+  }
 
   function init() {
     const triggerBtn = document.querySelector('.filter_button_mobile');
@@ -67,11 +72,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!triggerBtn || !wrapper || !container) return;
 
-    container.style.transition = `transform ${TRANSITION_MS}ms ${EASE}`;
-    container.style.willChange = 'transform';
-    container.style.transform  = 'translateX(-100%)';
+    function applyMobileStyles() {
+      container.style.transition = `transform ${TRANSITION_MS}ms ${EASE}`;
+      container.style.willChange = 'transform';
+      container.style.transform  = 'translateX(-100%)';
+    }
+
+    function resetDesktopStyles() {
+      container.style.transition = '';
+      container.style.willChange = '';
+      container.style.transform  = '';
+      wrapper.style.display      = '';
+      document.body.style.overflow = '';
+    }
+
+    // Set correct initial state
+    if (isMobile()) {
+      applyMobileStyles();
+    }
+
+    // Re-evaluate on resize
+    window.addEventListener('resize', function () {
+      if (isMobile()) {
+        applyMobileStyles();
+      } else {
+        resetDesktopStyles();
+      }
+    });
 
     function openSidebar() {
+      if (!isMobile()) return;
       wrapper.style.display        = 'block';
       document.body.style.overflow = 'hidden';
       requestAnimationFrame(() => {
@@ -82,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function closeSidebar() {
+      if (!isMobile()) return;
       container.style.transform    = 'translateX(-100%)';
       document.body.style.overflow = '';
       setTimeout(() => {
