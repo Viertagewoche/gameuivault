@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.0.8
+// Version: 1.0.9
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -106,6 +106,14 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
 
+    function recalcAccordions() {
+      const openButtons = container.querySelectorAll('.' + CONFIG.openClass);
+      openButtons.forEach(function (button) {
+        const contents = button.nextElementSibling;
+        if (contents) contents.style.maxHeight = contents.scrollHeight + 'px';
+      });
+    }
+
     function openSidebar() {
       if (!isMobile()) return;
       wrapper.style.display        = 'block';
@@ -113,6 +121,8 @@ document.addEventListener('DOMContentLoaded', function () {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           container.style.transform = 'translateX(0)';
+          // Sidebar ist jetzt sichtbar → scrollHeight korrekt neu berechnen
+          recalcAccordions();
         });
       });
     }
@@ -165,8 +175,9 @@ document.addEventListener('DOMContentLoaded', function () {
 // SEARCH
 // ================================
 (function () {
-  const trigger     = document.getElementById('search-trigger');
-  const modal       = document.getElementById('search-modal');
+  const trigger       = document.getElementById('search-trigger');
+  const triggerMobile = document.querySelector('.modal_search-form-icon_mobile');
+  const modal         = document.getElementById('search-modal');
   const backdrop    = document.getElementById('search-backdrop');
   const input       = document.getElementById('search-input');
   const resultsWrap = document.getElementById('search-results');
@@ -208,6 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
   observer.observe(list, { attributes: true, attributeFilter: ['class'] });
 
   trigger.addEventListener('click', openModal);
+  if (triggerMobile) triggerMobile.addEventListener('click', openModal);
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
