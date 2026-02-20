@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.0.7
+// Version: 1.0.8
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -8,7 +8,7 @@ const CONFIG = {
   buttonClass: '.filter_accordion_button',
   chevronClass: '.icon_cheveron',
   openClass: 'is-open',
-  initialOpenCount: Infinity,     // All accordions open on load
+  initialOpenCount: 1,            // Desktop: only first accordion open on load
   animationDuration: '0.3s',      // Animation speed
 };
 // ================================
@@ -18,7 +18,13 @@ const CONFIG = {
 // ACCORDION
 // ================================
 document.addEventListener('DOMContentLoaded', function () {
+  const MOBILE_BREAKPOINT = 991;
   const accordionButtons = document.querySelectorAll(CONFIG.buttonClass);
+
+  function getInitialOpenCount() {
+    return window.innerWidth <= MOBILE_BREAKPOINT ? Infinity : CONFIG.initialOpenCount;
+  }
+
   accordionButtons.forEach(function (button, index) {
     const contents = button.nextElementSibling;
     const chevron = button.querySelector(CONFIG.chevronClass);
@@ -28,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (chevron) {
       chevron.style.transition = `transform ${CONFIG.animationDuration} ease`;
     }
-    if (index < CONFIG.initialOpenCount) {
+    if (index < getInitialOpenCount()) {
       contents.style.maxHeight = contents.scrollHeight + 'px';
       if (chevron) chevron.style.transform = 'rotate(0deg)';
       button.classList.add(CONFIG.openClass);
