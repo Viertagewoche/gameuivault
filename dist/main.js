@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.0.5
+// Version: 1.0.6
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -8,8 +8,8 @@ const CONFIG = {
   buttonClass: '.filter_accordion_button',
   chevronClass: '.icon_cheveron',
   openClass: 'is-open',
-  initialOpenCount: 2,        // Number of accordions open on load
-  animationDuration: '0.3s',  // Animation speed
+  initialOpenCount: Infinity,     // All accordions open on load
+  animationDuration: '0.3s',      // Animation speed
 };
 // ================================
 
@@ -50,6 +50,78 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+
+
+// ================================
+// FILTER SIDEBAR
+// ================================
+(function () {
+  const TRANSITION_MS = 300;
+  const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+  function init() {
+    const triggerBtn = document.querySelector('.filter_button_mobile');
+    const wrapper    = document.querySelector('.filter_accordion-wrapper');
+    const container  = document.querySelector('.filter_accordion-container');
+    const closeBtn   = document.querySelector('.filter_sidebar_mobile_close-button');
+
+    if (!triggerBtn || !wrapper || !container) return;
+
+    container.style.transition = `transform ${TRANSITION_MS}ms ${EASE}`;
+    container.style.willChange = 'transform';
+    container.style.transform  = 'translateX(-100%)';
+
+    function openSidebar() {
+      wrapper.style.display        = 'block';
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          container.style.transform = 'translateX(0)';
+        });
+      });
+    }
+
+    function closeSidebar() {
+      container.style.transform    = 'translateX(-100%)';
+      document.body.style.overflow = '';
+      setTimeout(() => {
+        wrapper.style.display = 'none';
+      }, TRANSITION_MS);
+    }
+
+    triggerBtn.addEventListener('click', openSidebar);
+
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+
+    wrapper.addEventListener('click', function (e) {
+      if (!container.contains(e.target)) closeSidebar();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSidebar();
+    });
+
+    // Checkbox-Auswahl schließt Sidebar
+    document.addEventListener('change', function (e) {
+      if (e.target.closest('.filter_checkbox_component')) {
+        setTimeout(closeSidebar, 150);
+      }
+    });
+
+    // Dropdown-Link Auswahl schließt Sidebar
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.dropdown_dropdown-link')) {
+        setTimeout(closeSidebar, 150);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 
 
 // ================================
