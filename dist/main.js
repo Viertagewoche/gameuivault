@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.0.9
+// Version: 1.1.0
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -18,12 +18,7 @@ const CONFIG = {
 // ACCORDION
 // ================================
 document.addEventListener('DOMContentLoaded', function () {
-  const MOBILE_BREAKPOINT = 991;
   const accordionButtons = document.querySelectorAll(CONFIG.buttonClass);
-
-  function getInitialOpenCount() {
-    return window.innerWidth <= MOBILE_BREAKPOINT ? Infinity : CONFIG.initialOpenCount;
-  }
 
   accordionButtons.forEach(function (button, index) {
     const contents = button.nextElementSibling;
@@ -34,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (chevron) {
       chevron.style.transition = `transform ${CONFIG.animationDuration} ease`;
     }
-    if (index < getInitialOpenCount()) {
+    if (index < CONFIG.initialOpenCount) {
       contents.style.maxHeight = contents.scrollHeight + 'px';
       if (chevron) chevron.style.transform = 'rotate(0deg)';
       button.classList.add(CONFIG.openClass);
@@ -118,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!isMobile()) return;
       wrapper.style.display        = 'block';
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           container.style.transform = 'translateX(0)';
@@ -131,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!isMobile()) return;
       container.style.transform    = 'translateX(-100%)';
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
       setTimeout(() => {
         wrapper.style.display = 'none';
       }, TRANSITION_MS);
@@ -193,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.style.overflow = 'hidden';
     document.body.style.paddingRight = scrollbarWidth + 'px';
     modal.style.display = 'flex';
-    setTimeout(() => input.focus(), 50);
+    input.focus(); // Direkt im User-Gesture → Mobile Keyboard öffnet sich
   }
 
   function closeModal() {
@@ -225,7 +222,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
   });
 
-  backdrop.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', function (e) {
+    if (!e.target.closest('.modal_search-container')) closeModal();
+  });
 
   input.addEventListener('input', () => {
     resultsWrap.style.display =
