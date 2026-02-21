@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.1.0
+// Version: 1.1.1
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
     currentIndex = index;
 
     const lb = items[currentIndex];
-    lb.style.display = 'block';
+    lb.style.display = 'flex'; // ← geändert von 'block' zu 'flex'
 
     const slug = getSlugForIndex(index);
     setUrlSlug(slug);
