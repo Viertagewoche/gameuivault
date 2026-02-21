@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.1.1
+// Version: 1.1.2
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -117,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function () {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           container.style.transform = 'translateX(0)';
-          // Sidebar ist jetzt sichtbar → scrollHeight korrekt neu berechnen
           recalcAccordions();
         });
       });
@@ -145,14 +144,14 @@ document.addEventListener('DOMContentLoaded', function () {
       if (e.key === 'Escape') closeSidebar();
     });
 
-    // Checkbox-Auswahl schließt Sidebar
+    // Checkbox selection closes sidebar
     document.addEventListener('change', function (e) {
       if (e.target.closest('.filter_checkbox_component')) {
         setTimeout(closeSidebar, 150);
       }
     });
 
-    // Dropdown-Link Auswahl schließt Sidebar
+    // Dropdown link selection closes sidebar
     document.addEventListener('click', function (e) {
       if (e.target.closest('.dropdown_dropdown-link')) {
         setTimeout(closeSidebar, 150);
@@ -172,15 +171,19 @@ document.addEventListener('DOMContentLoaded', function () {
 // SEARCH
 // ================================
 (function () {
+  const ANIMATION_DURATION = 250; // ms
+
   const trigger       = document.getElementById('search-trigger');
   const triggerMobile = document.querySelector('.modal_search-form-icon_mobile');
   const modal         = document.getElementById('search-modal');
-  const backdrop    = document.getElementById('search-backdrop');
-  const input       = document.getElementById('search-input');
-  const resultsWrap = document.getElementById('search-results');
-  const loading     = document.getElementById('search-loading');
-  const list        = document.querySelector('[fs-list-instance="search"]');
+  const backdrop      = document.getElementById('search-backdrop');
+  const input         = document.getElementById('search-input');
+  const resultsWrap   = document.getElementById('search-results');
+  const loading       = document.getElementById('search-loading');
+  const container     = modal.querySelector('.modal_search-container');
+  const list          = document.querySelector('[fs-list-instance="search"]');
 
+  // Get scrollbar width to prevent layout shift
   function getScrollbarWidth() {
     return window.innerWidth - document.documentElement.clientWidth;
   }
@@ -189,20 +192,43 @@ document.addEventListener('DOMContentLoaded', function () {
     const scrollbarWidth = getScrollbarWidth();
     document.body.style.overflow = 'hidden';
     document.body.style.paddingRight = scrollbarWidth + 'px';
+
+    // Set start state before display:flex
+    modal.style.opacity = '0';
+    modal.style.transition = `opacity ${ANIMATION_DURATION}ms ease`;
+    container.style.transform = 'translateY(-12px)';
+    container.style.transition = `transform ${ANIMATION_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`;
+
     modal.style.display = 'flex';
-    input.focus(); // Direkt im User-Gesture → Mobile Keyboard öffnet sich
+
+    // Double rAF: ensures browser registers start state before animating
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+        container.style.transform = 'translateY(0)';
+        input.focus();
+      });
+    });
   }
 
   function closeModal() {
-    modal.style.display = 'none';
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
-    input.value = '';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    resultsWrap.style.display = 'none';
-    loading.style.display = 'none';
+    // Animate out
+    modal.style.opacity = '0';
+    container.style.transform = 'translateY(-12px)';
+
+    // Wait for animation to finish before hiding
+    setTimeout(() => {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      resultsWrap.style.display = 'none';
+      loading.style.display = 'none';
+    }, ANIMATION_DURATION);
   }
 
+  // Show/hide loading spinner via MutationObserver on FS fs-loading class
   const observer = new MutationObserver(() => {
     if (list.classList.contains('fs-loading')) {
       loading.style.display = 'flex';
@@ -215,17 +241,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
   observer.observe(list, { attributes: true, attributeFilter: ['class'] });
 
+  // Open modal triggers
   trigger.addEventListener('click', openModal);
   if (triggerMobile) triggerMobile.addEventListener('click', openModal);
 
+  // Close modal on ESC key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
   });
 
+  // Close modal on outside click (backdrop)
   backdrop.addEventListener('click', function (e) {
     if (!e.target.closest('.modal_search-container')) closeModal();
   });
 
+  // Show results only after 2 characters
   input.addEventListener('input', () => {
     resultsWrap.style.display =
       input.value.trim().length >= 2 ? 'block' : 'none';
@@ -299,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
     currentIndex = index;
 
     const lb = items[currentIndex];
-    lb.style.display = 'flex'; // ← geändert von 'block' zu 'flex'
+    lb.style.display = 'flex';
 
     const slug = getSlugForIndex(index);
     setUrlSlug(slug);
