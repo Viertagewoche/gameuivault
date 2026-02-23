@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.1.6
+// Version: 1.1.7
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -51,6 +51,48 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+
+
+// ================================
+// LIST FILTERING ANIMATION
+// ================================
+// Finsweet V2 has no fs-list-filteringclass attribute.
+// We replicate the fade+slide animation by watching Finsweet's own
+// fs-list-loading attribute on the list element.
+(function () {
+  function init() {
+    const listEl = document.querySelector('[fs-list-instance="games"][fs-list-element="list"]');
+    if (!listEl) return;
+
+    const wrapper = listEl.closest('.w-dyn-list');
+    if (!wrapper) return;
+
+    // Ensure wrapper starts visible (remove any hardcoded is-list-filtering)
+    wrapper.classList.remove('is-list-filtering');
+    wrapper.style.transition   = 'opacity 250ms ease, transform 250ms ease';
+    wrapper.style.opacity      = '1';
+    wrapper.style.transform    = 'translateY(0)';
+    wrapper.style.pointerEvents = '';
+
+    new MutationObserver(() => {
+      if (listEl.hasAttribute('fs-list-loading')) {
+        wrapper.style.opacity      = '0';
+        wrapper.style.transform    = 'translateY(8px)';
+        wrapper.style.pointerEvents = 'none';
+      } else {
+        wrapper.style.opacity      = '1';
+        wrapper.style.transform    = 'translateY(0)';
+        wrapper.style.pointerEvents = '';
+      }
+    }).observe(listEl, { attributes: true, attributeFilter: ['fs-list-loading'] });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 
 
 // ================================
