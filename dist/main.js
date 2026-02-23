@@ -8,7 +8,7 @@ const CONFIG = {
   buttonClass: '.filter_accordion_button',
   chevronClass: '.icon_cheveron',
   openClass: 'is-open',
-  initialOpenCount: 1,            // Desktop: only first accordion open on load
+  initialOpenCount: 2,            // Desktop: only first accordion open on load
   animationDuration: '0.3s',      // Animation speed
 };
 // ================================
