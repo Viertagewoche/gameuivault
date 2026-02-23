@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.1.2
+// Version: 1.2.3
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -592,4 +592,284 @@ document.addEventListener('DOMContentLoaded', function () {
   } else {
     pollForSlug();
   }
+})();
+
+
+// ================================
+// RECENTLY ADDED TAG
+// ================================
+//
+// Displays a "Recently Added" badge on game cards that meet both conditions:
+//   1. The game is among the first RECENT_COUNT items in the list (sorted by
+//      "Recently Added" — the default sort order of the Finsweet List instance).
+//   2. The game was added to the CMS within the last DAYS_THRESHOLD days.
+//
+// Requirements:
+//   - The CMS "Created On" field must be bound to a hidden element inside each
+//     card with the attribute [fs-list-field="created-on"].
+//   - The badge element (.card_tag_component) must already exist in each card
+//     template and be set to display:none by default in Webflow.
+//   - The [data-guiv="tag-pulse"] element inside .card_tag_component will
+//     receive a CSS pulse animation to draw attention to the badge.
+//
+// The tag is re-evaluated on every Finsweet list render (filter / sort changes).
+//
+(function () {
+  'use strict';
+
+  // ── Configuration ────────────────────────────────────────────────────────────
+
+  /** Maximum number of cards that can ever show the badge. */
+  const RECENT_COUNT = 3;
+
+  /**
+   * A card only receives the badge if it was added within this many days.
+   * Prevents the badge lingering indefinitely on older entries.
+   */
+  const DAYS_THRESHOLD = 30;
+
+  // ── Styles ───────────────────────────────────────────────────────────────────
+
+  // Inject the pulse keyframe once; the animation targets only
+  // [data-guiv="tag-pulse"] so it never conflicts with other .element_square
+  // instances on the page.
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes guiv-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+    [data-guiv="tag-pulse"] {
+      animation: guiv-pulse 2s ease-in-out infinite;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ── Core logic ───────────────────────────────────────────────────────────────
+
+  /**
+   * Iterates over all visible (non-skeleton) game cards and shows or hides
+   * their .card_tag_component badge based on position and CMS creation date.
+   *
+   * Called on:
+   *   - Finsweet "fs-list-ready"  (initial render)
+   *   - Finsweet "fs-list-render" (after filter / sort changes)
+   *   - window "load" + 500ms fallback (safety net)
+   */
+  function tagRecentGames() {
+    const list = document.querySelector('[fs-list-instance="games"][fs-list-element="list"]');
+    if (!list) return;
+
+    const now       = Date.now();
+    const threshold = DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
+
+    const items = list.querySelectorAll(
+      '.collection_item_wrapper.w-dyn-item:not(.guiv-sk)'
+    );
+
+    // Step 1: hide all badges (clean slate before re-evaluating)
+    items.forEach((item) => {
+      const tag = item.querySelector('.card_tag_component');
+      if (tag) tag.style.display = 'none';
+    });
+
+    // Step 2: show badge only on the first RECENT_COUNT items that are
+    // also within the DAYS_THRESHOLD window
+    Array.from(items).slice(0, RECENT_COUNT).forEach((item) => {
+      const tag    = item.querySelector('.card_tag_component');
+      const dateEl = item.querySelector('[fs-list-field="created-on"]');
+      if (!tag || !dateEl) return;
+
+      const addedDate = new Date(dateEl.textContent.trim()).getTime();
+      const isNew     = !isNaN(addedDate) && (now - addedDate) < threshold;
+
+      if (isNew) tag.style.display = 'flex';
+    });
+  }
+
+  // ── Event bindings ───────────────────────────────────────────────────────────
+
+  document.addEventListener('fs-list-ready',  tagRecentGames);
+  document.addEventListener('fs-list-render', tagRecentGames);
+  window.addEventListener('load', () => setTimeout(tagRecentGames, 500));
+
+})();
+
+
+// ================================
+// CARD TITLE MARQUEE
+// ================================
+//
+// Animates truncated card titles with a smooth horizontal scroll (marquee)
+// on hover. Supports both card types used across the site:
+//
+//   Card type               | Card selector                | Title selector
+//   ─────────────────────── | ─────────────────────────── | ──────────────────────
+//   Games gallery card      | .games-card_component        | .games-card_title
+//   Screenshots gallery card| .screenshot-card_component   | .screenshot-card_title
+//
+// Requirements (apply to both card types):
+//   - The title element must be wrapped in a dedicated wrapper element
+//     (.games-card_title_wrapper / .screenshot-card_title_wrapper) with
+//     overflow:hidden set in Webflow Designer. This clips the scrolling text.
+//   - white-space:nowrap is applied to the title via this script so the text
+//     stays on a single line and overflows when too long.
+//
+// Behaviour:
+//   - Only truncated titles (scrollWidth > clientWidth) are animated.
+//     Titles that fit within the card are left untouched.
+//   - A ResizeObserver watches every card individually. When the viewport
+//     narrows past a breakpoint and a title becomes truncated, the marquee
+//     activates automatically — no page reload required. It deactivates
+//     again if the viewport widens and the title fits once more.
+//   - On mouseenter : the marquee animation starts.
+//   - On mouseleave : the animation stops and the title eases back to its
+//     original position over 0.6s (no abrupt snap).
+//   - Event listeners are attached only once per card (guarded by a flag).
+//
+(function () {
+  'use strict';
+
+  // ── Configuration ────────────────────────────────────────────────────────────
+
+  /**
+   * Defines which card/title selector pairs the marquee applies to.
+   * Add further entries here to extend support to additional card types.
+   *
+   * @type {Array<{ cardSelector: string, titleSelector: string }>}
+   */
+  const CARD_CONFIGS = [
+    {
+      cardSelector:  '.games-card_component',
+      titleSelector: '.games-card_title',
+    },
+    {
+      cardSelector:  '.screenshot-card_component',
+      titleSelector: '.screenshot-card_title',
+    },
+  ];
+
+  // ── Styles ───────────────────────────────────────────────────────────────────
+
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Keep both title types on a single line so overflow is detectable */
+    .games-card_title,
+    .screenshot-card_title {
+      white-space: nowrap;
+      display: block;
+    }
+
+    /* Forward scroll animation — offset is set per-element via JS */
+    @keyframes guiv-marquee {
+      0%   { transform: translateX(0); }
+      40%  { transform: translateX(var(--guiv-marquee-offset)); }
+      60%  { transform: translateX(var(--guiv-marquee-offset)); }
+      100% { transform: translateX(0); }
+    }
+
+    /* Active state: title is scrolling */
+    .is-marquee-active {
+      animation: guiv-marquee 3s ease-in-out infinite;
+    }
+
+    /* Return state: title eases back to start after hover ends */
+    .is-marquee-return {
+      transition: transform 0.6s ease-in-out;
+      transform: translateX(0) !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ── Per-card setup ───────────────────────────────────────────────────────────
+
+  /**
+   * Attaches marquee behaviour to a single card element.
+   * Safe to call multiple times — on re-init it only refreshes the scroll
+   * offset rather than re-attaching event listeners.
+   *
+   * @param {HTMLElement} card          - The card container element.
+   * @param {string}      titleSelector - CSS selector for the title inside card.
+   */
+  function setupCard(card, titleSelector) {
+    const title = card.querySelector(titleSelector);
+    if (!title) return;
+
+    // ── Re-init path: card already set up, refresh offset only ──────────────
+    if (card._guivMarqueeInit) {
+      const offset = title.scrollWidth - title.clientWidth;
+      if (offset > 0) {
+        title.style.setProperty('--guiv-marquee-offset', `-${offset}px`);
+        card._guivMarqueeTruncated = true;
+      } else {
+        // Title now fits — disable marquee and clear any residual transform
+        card._guivMarqueeTruncated = false;
+        title.classList.remove('is-marquee-active', 'is-marquee-return');
+        title.style.transform = '';
+      }
+      return;
+    }
+
+    // ── First-init path ──────────────────────────────────────────────────────
+    card._guivMarqueeInit      = true;
+    card._guivMarqueeTruncated = false;
+
+    // mouseenter: start animation only when title is truncated
+    card.addEventListener('mouseenter', () => {
+      if (!card._guivMarqueeTruncated) return;
+      title.classList.remove('is-marquee-return');
+      title.classList.add('is-marquee-active');
+    });
+
+    // mouseleave: stop animation and smoothly return to start position
+    card.addEventListener('mouseleave', () => {
+      if (!card._guivMarqueeTruncated) return;
+      title.classList.remove('is-marquee-active');
+      title.classList.add('is-marquee-return');
+      // Clean up return class after transition completes (matches 0.6s above)
+      setTimeout(() => title.classList.remove('is-marquee-return'), 600);
+    });
+
+    // ResizeObserver: re-evaluate truncation on every card resize.
+    // Handles breakpoint transitions (e.g. desktop → tablet) where a title
+    // that previously fit now overflows — and vice versa.
+    const ro = new ResizeObserver(() => {
+      const offset = title.scrollWidth - title.clientWidth;
+      if (offset > 0) {
+        title.style.setProperty('--guiv-marquee-offset', `-${offset}px`);
+        card._guivMarqueeTruncated = true;
+      } else {
+        card._guivMarqueeTruncated = false;
+        title.classList.remove('is-marquee-active', 'is-marquee-return');
+        title.style.transform = '';
+      }
+    });
+
+    ro.observe(card);
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+
+  /**
+   * Iterates over all registered card configs and calls setupCard on each
+   * matching element in the DOM. Safe to call repeatedly — already-initialised
+   * cards are handled by the re-init path in setupCard.
+   *
+   * Called on initial load and on every Finsweet list re-render so that
+   * newly injected cards (pagination, filter / sort changes) are covered.
+   */
+  function initMarquee() {
+    CARD_CONFIGS.forEach(({ cardSelector, titleSelector }) => {
+      document.querySelectorAll(cardSelector).forEach((card) => {
+        setupCard(card, titleSelector);
+      });
+    });
+  }
+
+  // ── Event bindings ───────────────────────────────────────────────────────────
+
+  document.addEventListener('fs-list-ready',  initMarquee);
+  document.addEventListener('fs-list-render', initMarquee);
+  window.addEventListener('load', () => setTimeout(initMarquee, 500));
+
 })();
