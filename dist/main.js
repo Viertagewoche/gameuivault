@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.3.3a
+// Version: 1.2.3
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -17,21 +17,6 @@ const CONFIG = {
 // ================================
 // ACCORDION
 // ================================
-//
-// Animates the filter sidebar accordion panels on the Games page.
-//
-//   Element                  | Selector
-//   ─────────────────────── | ──────────────────────────────
-//   Accordion button         | .filter_accordion_button
-//   Chevron icon             | .icon_cheveron
-//   Content panel            | button.nextElementSibling
-//
-// Behaviour:
-//   - On page load the first initialOpenCount panels are open, the rest collapsed.
-//   - Clicking a button toggles its panel open/closed with a max-height
-//     animation and rotates the chevron icon accordingly.
-//   - The open state is tracked via CONFIG.openClass on the button element.
-//
 document.addEventListener('DOMContentLoaded', function () {
   const accordionButtons = document.querySelectorAll(CONFIG.buttonClass);
 
@@ -69,85 +54,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 // ================================
-// LIST FILTERING ANIMATION
-// ================================
-//
-// Replicates the fade + slide animation that fires while Finsweet filters
-// the Games list. Finsweet Attributes V2 does not support the legacy
-// fs-list-filteringclass attribute, so this module handles the animation
-// in JS instead.
-//
-//   Element                  | Selector
-//   ─────────────────────── | ──────────────────────────────
-//   Finsweet list element    | [fs-list-instance="games"][fs-list-element="list"]
-//   Animated wrapper         | closest .w-dyn-list
-//
-// Behaviour:
-//   - On init the wrapper is forced visible and any hardcoded
-//     is-list-filtering class is removed.
-//   - A MutationObserver watches for the fs-list-loading attribute that
-//     Finsweet V2 sets natively during filtering. When present the wrapper
-//     fades out and slides down; when removed it fades back in.
-//
-(function () {
-  function init() {
-    const listEl = document.querySelector('[fs-list-instance="games"][fs-list-element="list"]');
-    if (!listEl) return;
-
-    const wrapper = listEl.closest('.w-dyn-list');
-    if (!wrapper) return;
-
-    // Ensure wrapper starts visible (remove any hardcoded is-list-filtering)
-    wrapper.classList.remove('is-list-filtering');
-    wrapper.style.transition   = 'opacity 250ms ease, transform 250ms ease';
-    wrapper.style.opacity      = '1';
-    wrapper.style.transform    = 'translateY(0)';
-    wrapper.style.pointerEvents = '';
-
-    new MutationObserver(() => {
-      if (listEl.hasAttribute('fs-list-loading')) {
-        wrapper.style.opacity      = '0';
-        wrapper.style.transform    = 'translateY(8px)';
-        wrapper.style.pointerEvents = 'none';
-      } else {
-        wrapper.style.opacity      = '1';
-        wrapper.style.transform    = 'translateY(0)';
-        wrapper.style.pointerEvents = '';
-      }
-    }).observe(listEl, { attributes: true, attributeFilter: ['fs-list-loading'] });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
-
-
-// ================================
 // FILTER SIDEBAR (Mobile only)
 // ================================
-//
-// Controls the off-canvas filter sidebar on mobile viewports (≤ 991px).
-// On desktop the sidebar is always visible; on mobile it slides in from
-// the left as an overlay when the user taps "Show filters".
-//
-//   Element                  | Selector
-//   ─────────────────────── | ──────────────────────────────
-//   Open trigger             | .filter_button_mobile
-//   Overlay wrapper          | .filter_accordion-wrapper
-//   Sliding container        | .filter_accordion-container
-//   Close button             | .filter_sidebar_mobile_close-button
-//
-// Behaviour:
-//   - Below the breakpoint the container starts off-screen (translateX(-100%)).
-//   - Tapping the trigger slides the container into view and locks body scroll.
-//   - The sidebar closes on: close button click, backdrop click, ESC key,
-//     checkbox change, or sort dropdown link click.
-//   - On resize, desktop styles are restored if the viewport grows above the
-//     breakpoint so the sidebar is never stuck off-screen on tablet rotation.
-//
 (function () {
   const TRANSITION_MS = 300;
   const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -262,29 +170,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // ================================
 // SEARCH
 // ================================
-//
-// Controls the full-screen search modal triggered from the navbar.
-//
-//   Element                  | Selector / ID
-//   ─────────────────────── | ──────────────────────────────
-//   Desktop trigger          | #search-trigger
-//   Mobile trigger           | .modal_search-form-icon_mobile
-//   Modal overlay            | #search-modal
-//   Backdrop                 | #search-backdrop
-//   Search input             | #search-input
-//   Results wrapper          | #search-results
-//   Loading spinner          | #search-loading
-//   Finsweet search list     | [fs-list-instance="search"]
-//
-// Behaviour:
-//   - The modal opens with a fade + slide-down animation and auto-focuses
-//     the input. A scrollbar-width offset prevents layout shift on open.
-//   - Results are revealed only after the user has typed ≥ 2 characters.
-//   - A MutationObserver on the Finsweet list element shows/hides the
-//     loading spinner while Finsweet fetches results.
-//   - The modal closes on: ESC key or click outside .modal_search-container.
-//     On close the input is cleared and results are hidden.
-//
 (function () {
   const ANIMATION_DURATION = 250; // ms
 
@@ -381,35 +266,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // ================================
 // LIGHTBOX
 // ================================
-//
-// Full-screen image viewer for the Screenshots gallery. Opens when a user
-// clicks a screenshot card and supports keyboard navigation and direct
-// URL linking via a ?screenshot= query parameter.
-//
-//   Element                  | Selector / attribute
-//   ─────────────────────── | ──────────────────────────────
-//   Lightbox overlay         | .lightbox_component
-//   Inner container          | .lightobx_container  (note: typo matches Webflow)
-//   Close button             | .lightbox_close-button
-//   Card trigger             | .screenshot-card_component
-//   Screenshot slug          | [data-lightbox-slug]  (hidden text in each card)
-//   Image element            | [data-lightbox-image]
-//   Download / copy buttons  | [data-lightbox-action="download|copy"]
-//   File title               | .lightbox-title_text
-//   Game title               | .lightbox-game-title
-//
-// Behaviour:
-//   - Clicking a card opens the lightbox for that item with a scale + fade
-//     animation. The card's position in the collection determines the index.
-//   - Arrow keys navigate between screenshots; ESC closes the lightbox.
-//   - Scrolling (wheel) or a vertical swipe (touch) closes the lightbox.
-//   - The current screenshot's slug is written to the URL (?screenshot=slug)
-//     so the view can be bookmarked or shared.
-//   - On page load the URL is checked and the matching lightbox is opened
-//     automatically. A polling fallback handles slow Finsweet renders.
-//   - Download saves a PNG with a sanitised filename (title + game name).
-//   - Copy writes the image to the clipboard as PNG.
-//
 (function () {
   let currentIndex = -1;
   let items = [];
@@ -650,7 +506,6 @@ document.addEventListener('DOMContentLoaded', function () {
       attempts++;
       if (attempts < maxAttempts) {
         setTimeout(attempt, 500);
-        // Trigger load-more on attempt 2 in case the item is on the next page
         if (attempts === 2) {
           const loadMoreBtn = document.querySelector('[fs-cmsload-element="load-more"]');
           if (loadMoreBtn) loadMoreBtn.click();
@@ -709,10 +564,28 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'ArrowLeft') navigate(-1);
   });
 
-  // Finsweet Attributes V2 — re-check URL slug after list renders
-  document.addEventListener('fs-list-render', function () {
-    if (currentIndex === -1) tryOpenFromUrl();
-  });
+  window.fsAttributes = window.fsAttributes || [];
+  window.fsAttributes.push([
+    'cmsload',
+    function (listInstances) {
+      listInstances.forEach(function (listInstance) {
+        listInstance.on('renderitems', function () {
+          if (currentIndex === -1) tryOpenFromUrl();
+        });
+      });
+    },
+  ]);
+
+  window.fsAttributes.push([
+    'cmsfilter',
+    function (filterInstances) {
+      filterInstances.forEach(function (filterInstance) {
+        filterInstance.listInstance.on('renderitems', function () {
+          if (currentIndex === -1) tryOpenFromUrl();
+        });
+      });
+    },
+  ]);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', pollForSlug);
@@ -720,7 +593,6 @@ document.addEventListener('DOMContentLoaded', function () {
     pollForSlug();
   }
 })();
-
 
 // ================================
 // CARD TITLE MARQUEE
