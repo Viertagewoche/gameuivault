@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.2.3
+// Version: 1.2.4
 
 // ================================
 // CONFIGURATION - Adjust as needed
