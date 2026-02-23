@@ -596,14 +596,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 // ================================
-// RECENTLY ADDED TAG
+// RECENTLY ADDED TAG & MARQUEE
 // ================================
 (function () {
   'use strict';
 
+  // --- Config ---
   const RECENT_COUNT = 3;
   const DAYS_THRESHOLD = 30;
 
+  // --- Styles ---
   const style = document.createElement('style');
   style.textContent = `
     @keyframes guiv-pulse {
@@ -613,75 +615,10 @@ document.addEventListener('DOMContentLoaded', function () {
     [data-guiv="tag-pulse"] {
       animation: guiv-pulse 2s ease-in-out infinite;
     }
-  `;
-  document.head.appendChild(style);
-
-  function tagRecentGames() {
-    const list = document.querySelector('[fs-list-instance="games"][fs-list-element="list"]');
-    if (!list) return;
-
-    const now       = Date.now();
-    const threshold = DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
-
-    // Hole alle Items, filtere aber die heraus, die Finsweet gerade versteckt hat
-    const allItems = Array.from(list.querySelectorAll('.collection_item_wrapper.w-dyn-item:not(.guiv-sk)'));
-    const visibleItems = allItems.filter(item => 
-      item.style.display !== 'none' && !item.classList.contains('fs-cmsfilter_hide')
-    );
-
-    // 1. Alle Tags verstecken
-    allItems.forEach((item) => {
-      const tag = item.querySelector('.card_tag_component');
-      if (tag) tag.style.display = 'none';
-    });
-
-    // 2. Tags nur auf die ersten sichtbaren anwenden
-    visibleItems.slice(0, RECENT_COUNT).forEach((item) => {
-      const tag    = item.querySelector('.card_tag_component');
-      const dateEl = item.querySelector('[fs-list-field="created-on"]');
-      if (!tag || !dateEl) return;
-
-      const addedDate = new Date(dateEl.textContent.trim()).getTime();
-      const isNew     = !isNaN(addedDate) && (now - addedDate) < threshold;
-
-      if (isNew) tag.style.display = 'flex';
-    });
-  }
-
-  // Korrekte Finsweet V2 Integration
-  window.fsAttributes = window.fsAttributes || [];
-  window.fsAttributes.push([
-    'cmsfilter',
-    function (filterInstances) {
-      filterInstances.forEach(function (filterInstance) {
-        filterInstance.listInstance.on('renderitems', () => {
-          requestAnimationFrame(tagRecentGames); // Verhindert Lag beim Rendern
-        });
-      });
-    }
-  ]);
-
-  window.addEventListener('load', () => setTimeout(tagRecentGames, 500));
-})();
-
-
-// ================================
-// CARD TITLE MARQUEE
-// ================================
-(function () {
-  'use strict';
-
-  const CARD_CONFIGS = [
-    { cardSelector: '.games-card_component', titleSelector: '.games-card_title' },
-    { cardSelector: '.screenshot-card_component', titleSelector: '.screenshot-card_title' },
-  ];
-
-  const style = document.createElement('style');
-  style.textContent = `
     .games-card_title,
     .screenshot-card_title {
       white-space: nowrap;
-      display: block;
+      display: inline-block; /* Besser für die Breiten-Berechnung */
     }
     @keyframes guiv-marquee {
       0%   { transform: translateX(0); }
@@ -699,32 +636,42 @@ document.addEventListener('DOMContentLoaded', function () {
   `;
   document.head.appendChild(style);
 
-  // EINER für alle - rettet die Performance!
+  // --- Marquee Observer ---
   const marqueeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
-      const card = entry.target;
-      const title = card.querySelector('.games-card_title, .screenshot-card_title');
-      if (!title) continue;
+      try {
+        const card = entry.target;
+        // Hier greifen wir nun deinen exakten Wrapper ab!
+        const wrapper = card.querySelector('.games-card_title_wrapper, .screenshot-card_title_wrapper');
+        const title = card.querySelector('.games-card_title, .screenshot-card_title');
+        
+        if (!wrapper || !title) continue;
 
-      const offset = title.scrollWidth - title.clientWidth;
-      if (offset > 0) {
-        title.style.setProperty('--guiv-marquee-offset', `-${offset}px`);
-        card._guivMarqueeTruncated = true;
-      } else {
-        card._guivMarqueeTruncated = false;
-        title.classList.remove('is-marquee-active', 'is-marquee-return');
-        title.style.transform = '';
+        // Berechnung: Wahre Textbreite minus die Breite des sichtbaren Wrappers
+        const offset = title.scrollWidth - wrapper.clientWidth;
+        
+        if (offset > 0) {
+          title.style.setProperty('--guiv-marquee-offset', \`-\${offset}px\`);
+          card._guivMarqueeTruncated = true;
+        } else {
+          card._guivMarqueeTruncated = false;
+          title.classList.remove('is-marquee-active', 'is-marquee-return');
+          title.style.transform = '';
+        }
+      } catch (e) {
+        console.error('Marquee Observer Error:', e);
       }
     }
   });
 
-  function setupCard(card, titleSelector) {
-    if (card._guivMarqueeInit) return; // Nur beim ersten Mal anheften
+  function setupCard(card) {
+    if (card._guivMarqueeInit) return;
+    
+    const wrapper = card.querySelector('.games-card_title_wrapper, .screenshot-card_title_wrapper');
+    const title = card.querySelector('.games-card_title, .screenshot-card_title');
+    if (!wrapper || !title) return;
 
-    const title = card.querySelector(titleSelector);
-    if (!title) return;
-
-    card._guivMarqueeInit      = true;
+    card._guivMarqueeInit = true;
     card._guivMarqueeTruncated = false;
 
     card.addEventListener('mouseenter', () => {
@@ -743,26 +690,60 @@ document.addEventListener('DOMContentLoaded', function () {
     marqueeObserver.observe(card);
   }
 
-  function initMarquee() {
-    CARD_CONFIGS.forEach(({ cardSelector, titleSelector }) => {
-      document.querySelectorAll(cardSelector).forEach((card) => {
-        setupCard(card, titleSelector);
+  // --- Haupt-Logik (Geschützt durch Try/Catch) ---
+  function updateFeatures() {
+    try {
+      // 1. Marquee Setup
+      document.querySelectorAll('.games-card_component, .screenshot-card_component').forEach(setupCard);
+
+      // 2. Recently Added Tag
+      // Fallback-Selektor, falls das Attribut in Webflow anders heißt
+      const list = document.querySelector('[fs-cmsfilter-element="list"]') || document.querySelector('[fs-list-instance="games"]');
+      if (!list) return;
+
+      const now = Date.now();
+      const threshold = DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
+      const allItems = Array.from(list.querySelectorAll('.collection_item_wrapper.w-dyn-item:not(.guiv-sk)'));
+      
+      // Nur sichtbare Items filtern
+      const visibleItems = allItems.filter(item => 
+        item.style.display !== 'none' && !item.classList.contains('fs-cmsfilter_hide')
+      );
+
+      allItems.forEach(item => {
+        const tag = item.querySelector('.card_tag_component');
+        if (tag) tag.style.display = 'none';
       });
-    });
+
+      visibleItems.slice(0, RECENT_COUNT).forEach(item => {
+        const tag = item.querySelector('.card_tag_component');
+        const dateEl = item.querySelector('[fs-list-field="created-on"]');
+        if (!tag || !dateEl) return;
+
+        const addedDate = new Date(dateEl.textContent.trim()).getTime();
+        if (!isNaN(addedDate) && (now - addedDate) < threshold) {
+          tag.style.display = 'flex';
+        }
+      });
+    } catch (error) {
+      // Dieser Log schützt Finsweet vor dem "0 Ergebnisse" Absturz!
+      console.error('GUIV Update Error:', error); 
+    }
   }
 
-  // Korrekte Finsweet V2 Integration
+  // --- Init & Event Binding für Finsweet V2 ---
   window.fsAttributes = window.fsAttributes || [];
   window.fsAttributes.push([
     'cmsfilter',
     function (filterInstances) {
       filterInstances.forEach(function (filterInstance) {
         filterInstance.listInstance.on('renderitems', () => {
-          requestAnimationFrame(initMarquee); 
+          requestAnimationFrame(updateFeatures);
         });
       });
     }
   ]);
 
-  window.addEventListener('load', () => setTimeout(initMarquee, 500));
+  window.addEventListener('load', () => setTimeout(updateFeatures, 500));
+
 })();
