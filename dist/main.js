@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.3.5
+// Version: 1.3.5a
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -784,10 +784,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const DEFAULT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_';
 
   // Milliseconds between each animation frame — lower = faster
-  const DEFAULT_SPEED = 20;
+  const DEFAULT_SPEED = 60;
 
   // How many characters are revealed per frame — higher = more instant
-  const REVEAL_SPEED  = 12;
+  const REVEAL_SPEED  = 2;
 
   class TextScramble {
     constructor(el) {
@@ -803,6 +803,10 @@ document.addEventListener('DOMContentLoaded', function () {
       // Trigger on mouse hover and touch
       el.addEventListener('mouseenter', () => this.scramble());
       el.addEventListener('touchstart', () => this.scramble(), { passive: true });
+
+      // Stop animation immediately on click so the link/action is never blocked
+      // useCapture: true ensures this fires before the click propagates
+      el.addEventListener('click', () => this.restore(), true);
     }
 
     // Finds the innermost text-only span to avoid overwriting icon spans etc.
@@ -817,6 +821,16 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       this._textEl = el;
       return el.textContent;
+    }
+
+    // Immediately cancels the animation and restores the original text
+    restore() {
+      cancelAnimationFrame(this.frame);
+      if (this._textEl && this._textEl !== this.el) {
+        this._textEl.textContent = this.original;
+      } else {
+        this.el.textContent = this.original;
+      }
     }
 
     scramble() {
@@ -852,11 +866,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (' :—-.,/'.includes(to)) {
               output += to;
             } else {
-              output += `<span style="opacity:0.4">${this.chars[Math.floor(Math.random() * this.chars.length)]}</span>`;
+              // pointer-events: none ensures scramble spans never block clicks
+              output += `<span style="opacity:0.4;pointer-events:none">${this.chars[Math.floor(Math.random() * this.chars.length)]}</span>`;
             }
           } else {
             // Character hasn't started yet — show dimmed original
-            output += `<span style="opacity:0.15">${to}</span>`;
+            output += `<span style="opacity:0.15;pointer-events:none">${to}</span>`;
           }
         }
 
