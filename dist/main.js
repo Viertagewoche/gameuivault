@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.3.5a
+// Version: 1.3.5b
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -784,10 +784,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const DEFAULT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_';
 
   // Milliseconds between each animation frame — lower = faster
-  const DEFAULT_SPEED = 60;
+  const DEFAULT_SPEED = 20;
 
   // How many characters are revealed per frame — higher = more instant
-  const REVEAL_SPEED  = 2;
+  const REVEAL_SPEED  = 10;
 
   class TextScramble {
     constructor(el) {
