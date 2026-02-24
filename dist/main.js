@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.3.5c
+// Version: 1.3.5d
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -781,13 +781,8 @@ document.addEventListener('DOMContentLoaded', function () {
 //
 (function () {
 
-  // Characters used for the scramble effect
   const DEFAULT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_';
-
-  // Milliseconds between each animation frame — lower = faster
   const DEFAULT_SPEED = 20;
-
-  // How many characters are revealed per frame — higher = more instant
   const REVEAL_SPEED  = 10;
 
   class TextScramble {
@@ -799,8 +794,6 @@ document.addEventListener('DOMContentLoaded', function () {
       this.frame    = null;
     }
 
-    // Finds the innermost text-only span to avoid overwriting icon spans etc.
-    // Falls back to the element itself if no matching span is found
     _getTextNode(el) {
       const spans = el.querySelectorAll('span');
       for (const span of spans) {
@@ -813,7 +806,6 @@ document.addEventListener('DOMContentLoaded', function () {
       return el.textContent;
     }
 
-    // Immediately cancels the animation and restores the original text
     restore() {
       cancelAnimationFrame(this.frame);
       if (this._textEl && this._textEl !== this.el) {
@@ -828,9 +820,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const text = this.original;
 
-      // Build a queue — one entry per character
-      // start: which frame this char begins scrambling
-      // end: which frame this char gets revealed as its real value
       this.queue = text.split('').map((char, i) => ({
         to: char,
         start: Math.floor(i / REVEAL_SPEED),
@@ -881,36 +870,68 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function init() {
+  const CARD_SELECTORS  = ['.games-card_component', '.screenshot-card_component'];
+  const TARGET_SELECTOR = '.vault_file_ref';
 
-    // ── 1. Direct trigger: elements with data-scramble attribute ──
-    document.querySelectorAll('[data-scramble]').forEach(el => {
-      const scrambler = new TextScramble(el);
-      el.addEventListener('mouseenter', () => scrambler.scramble());
-      el.addEventListener('touchstart', () => scrambler.scramble(), { passive: true });
-      el.addEventListener('click',      () => scrambler.restore(), true);
-    });
+  // ── Attach scramble to a single card ──
+  function initCard(card) {
+    if (card.dataset.cardScrambleInit) return;
+    card.dataset.cardScrambleInit = 'true';
 
-    // ── 2. Card hover trigger: fires scramble on vault_file_ref inside the card ──
-    const CARD_SELECTORS  = ['.games-card_component', '.screenshot-card_component'];
-    const TARGET_SELECTOR = '.vault_file_ref';
+    const target = card.querySelector(TARGET_SELECTOR);
+    if (!target) return;
 
-    CARD_SELECTORS.forEach(cardSelector => {
-      document.querySelectorAll(cardSelector).forEach(card => {
-        if (card.dataset.cardScrambleInit) return;
-        card.dataset.cardScrambleInit = 'true';
+    const scrambler = new TextScramble(target);
 
-        const target = card.querySelector(TARGET_SELECTOR);
-        if (!target) return;
+    card.addEventListener('mouseenter', () => scrambler.scramble());
+    card.addEventListener('mouseleave', () => scrambler.restore());
+    card.addEventListener('click',      () => scrambler.restore(), true);
+  }
 
-        const scrambler = new TextScramble(target);
+  // ── Attach scramble to a direct data-scramble element ──
+  function initScrambleEl(el) {
+    if (el.dataset.scrambleInit) return;
+    el.dataset.scrambleInit = 'true';
 
-        card.addEventListener('mouseenter', () => scrambler.scramble());
-        card.addEventListener('mouseleave', () => scrambler.restore());
-        card.addEventListener('click',      () => scrambler.restore(), true);
+    const scrambler = new TextScramble(el);
+    el.addEventListener('mouseenter', () => scrambler.scramble());
+    el.addEventListener('touchstart', () => scrambler.scramble(), { passive: true });
+    el.addEventListener('click',      () => scrambler.restore(), true);
+  }
+
+  // ── Init all currently visible elements ──
+  function initAll() {
+    document.querySelectorAll('[data-scramble]').forEach(initScrambleEl);
+    CARD_SELECTORS.forEach(sel => document.querySelectorAll(sel).forEach(initCard));
+  }
+
+  // ── MutationObserver: watches for new cards added by infinite scroll ──
+  function observeDOM() {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType !== 1) return; // Only element nodes
+
+          // Check if the added node itself is a card or scramble element
+          CARD_SELECTORS.forEach(sel => {
+            if (node.matches(sel)) initCard(node);
+            // Also check descendants — infinite scroll often adds a wrapper with cards inside
+            node.querySelectorAll(sel).forEach(initCard);
+          });
+
+          if (node.matches('[data-scramble]')) initScrambleEl(node);
+          node.querySelectorAll('[data-scramble]').forEach(initScrambleEl);
+        });
       });
     });
 
+    // Observe the full document body for any DOM additions
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function init() {
+    initAll();
+    observeDOM();
   }
 
   if (document.readyState === 'loading') {
@@ -919,7 +940,6 @@ document.addEventListener('DOMContentLoaded', function () {
     init();
   }
 
-  // Re-init after Webflow page transitions
   window.Webflow = window.Webflow || [];
   window.Webflow.push(init);
 
