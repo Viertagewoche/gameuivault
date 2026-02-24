@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.3.4a
+// Version: 1.3.5
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -770,4 +770,131 @@ document.addEventListener('DOMContentLoaded', function () {
   document.addEventListener('fs-list-render', initMarquee);
   window.addEventListener('load', () => setTimeout(initMarquee, 500));
 
+})();
+
+
+
+
+// ================================
+// TEXT SCRAMBLE EFFECT
+// ================================
+//
+(function () {
+  // Characters used for the scramble effect
+  const DEFAULT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_';
+
+  // Milliseconds between each animation frame — lower = faster
+  const DEFAULT_SPEED = 20;
+
+  // How many characters are revealed per frame — higher = more instant
+  const REVEAL_SPEED  = 12;
+
+  class TextScramble {
+    constructor(el) {
+      this.el       = el;
+      // Allow per-element charset override via data-scramble-chars attribute
+      this.chars    = el.dataset.scrambleChars || DEFAULT_CHARS;
+      // Allow per-element speed override via data-scramble-speed attribute
+      this.speed    = parseInt(el.dataset.scrambleSpeed) || DEFAULT_SPEED;
+      // Store the original text so we can restore it after scrambling
+      this.original = this._getTextNode(el);
+      this.frame    = null;
+
+      // Trigger on mouse hover and touch
+      el.addEventListener('mouseenter', () => this.scramble());
+      el.addEventListener('touchstart', () => this.scramble(), { passive: true });
+    }
+
+    // Finds the innermost text-only span to avoid overwriting icon spans etc.
+    // Falls back to the element itself if no matching span is found
+    _getTextNode(el) {
+      const spans = el.querySelectorAll('span');
+      for (const span of spans) {
+        if (!span.querySelector('span') && span.textContent.trim().length > 2) {
+          this._textEl = span;
+          return span.textContent;
+        }
+      }
+      this._textEl = el;
+      return el.textContent;
+    }
+
+    scramble() {
+      // Cancel any running animation before starting a new one
+      cancelAnimationFrame(this.frame);
+
+      const text = this.original;
+
+      // Build a queue — one entry per character
+      // start: which frame this char begins scrambling
+      // end: which frame this char gets revealed as its real value
+      this.queue = text.split('').map((char, i) => ({
+        to: char,
+        start: Math.floor(i / REVEAL_SPEED),
+        end: Math.floor(i / REVEAL_SPEED) + Math.floor(Math.random() * 8) + 4,
+      }));
+
+      let iteration = 0;
+
+      const update = () => {
+        let output = '';
+        let complete = 0;
+
+        for (let i = 0; i < this.queue.length; i++) {
+          const { to, start, end } = this.queue[i];
+
+          if (iteration >= end) {
+            // Character fully revealed
+            complete++;
+            output += to;
+          } else if (iteration >= start) {
+            // Character is actively scrambling — skip spaces and punctuation
+            if (' :—-.,/'.includes(to)) {
+              output += to;
+            } else {
+              output += `<span style="opacity:0.4">${this.chars[Math.floor(Math.random() * this.chars.length)]}</span>`;
+            }
+          } else {
+            // Character hasn't started yet — show dimmed original
+            output += `<span style="opacity:0.15">${to}</span>`;
+          }
+        }
+
+        // Write to the text span if found, otherwise directly to the element
+        if (this._textEl && this._textEl !== this.el) {
+          this._textEl.innerHTML = output;
+        } else {
+          this.el.innerHTML = output;
+        }
+
+        // All characters revealed — restore clean text and stop
+        if (complete === this.queue.length) {
+          if (this._textEl && this._textEl !== this.el) {
+            this._textEl.textContent = this.original;
+          }
+          return;
+        }
+
+        iteration++;
+        this.frame = requestAnimationFrame(() => setTimeout(update, this.speed));
+      };
+
+      update();
+    }
+  }
+
+  // Init all elements with the data-scramble attribute
+  function init() {
+    document.querySelectorAll('[data-scramble]').forEach(el => new TextScramble(el));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Re-init after Webflow page transitions
+  window.Webflow = window.Webflow || [];
+  window.Webflow.push(init);
 })();
