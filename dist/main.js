@@ -1,5 +1,5 @@
 // gameuivault - Main Bundle
-// Version: 1.3.5d
+// Version: 1.3.6
 
 // ================================
 // CONFIGURATION - Adjust as needed
@@ -794,6 +794,12 @@ document.addEventListener('DOMContentLoaded', function () {
       this.frame    = null;
     }
 
+    // ── FIX Bug 1: Span-Wrapper erzwingen ──────────────────────────────────────
+    // Ohne Wrapper landen alle innerHTML-Schreibvorgänge direkt auf dem <a>-Tag.
+    // Das interpretiert der Browser als "Maus betritt Element neu" und feuert
+    // mouseenter erneut → Infinite Loop mit 400+ Events in 30 Sekunden.
+    // Mit einem inner <span> als Ziel bleiben die Änderungen im Child-Element
+    // und der <a> selbst wird nie angefasst → kein falsches mouseenter mehr.
     _getTextNode(el) {
       const spans = el.querySelectorAll('span');
       for (const span of spans) {
@@ -802,8 +808,13 @@ document.addEventListener('DOMContentLoaded', function () {
           return span.textContent;
         }
       }
-      this._textEl = el;
-      return el.textContent;
+      // Kein geeigneter Span gefunden → Wrapper erstellen
+      const wrapper = document.createElement('span');
+      wrapper.textContent = el.textContent.trim();
+      el.textContent = '';
+      el.appendChild(wrapper);
+      this._textEl = wrapper;
+      return wrapper.textContent;
     }
 
     restore() {
@@ -849,6 +860,8 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
 
+        // Schreibt immer auf den inner <span> (this._textEl),
+        // nie direkt auf das <a>-Tag (this.el) → verhindert mouseenter-Loop
         if (this._textEl && this._textEl !== this.el) {
           this._textEl.innerHTML = output;
         } else {
@@ -888,7 +901,7 @@ document.addEventListener('DOMContentLoaded', function () {
     card.addEventListener('click',      () => scrambler.restore(), true);
   }
 
-  // ── Attach scramble to a direct data-scramble element ──
+  // ── Attach scramble to a direct data-scramble element (z.B. Nav-Links) ──
   function initScrambleEl(el) {
     if (el.dataset.scrambleInit) return;
     el.dataset.scrambleInit = 'true';
@@ -897,6 +910,10 @@ document.addEventListener('DOMContentLoaded', function () {
     el.addEventListener('mouseenter', () => scrambler.scramble());
     el.addEventListener('touchstart', () => scrambler.scramble(), { passive: true });
     el.addEventListener('click',      () => scrambler.restore(), true);
+    // ── FIX Bug 2: mouseleave fehlte komplett ──────────────────────────────────
+    // Ohne diesen Handler lief die Animation einfach weiter, auch nachdem die
+    // Maus das Element verlassen hatte. Jetzt wird sauber restored.
+    el.addEventListener('mouseleave', () => scrambler.restore());
   }
 
   // ── Init all currently visible elements ──
