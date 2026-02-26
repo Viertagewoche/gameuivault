@@ -779,7 +779,7 @@
   (function() {
     "use strict";
     const BTN_SELECTOR = ".back_to_top_button";
-    const FOOTER_SELECTOR = "footer";
+    const FOOTER_SELECTOR = ".footer_component";
     const SHOW_AFTER_PX = 300;
     const DURATION = 0.3;
     const EASE = "power2.inOut";
