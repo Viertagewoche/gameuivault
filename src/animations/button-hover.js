@@ -13,7 +13,7 @@
   const COLOR_TRANSPARENT = 'rgba(0,0,0,0)';
 
   const DURATION = 0.28;
-  const EASE     = 'power2.inOut'; // easeInOutCubic
+  const EASE     = 'power2.inOut';
 
   const SPREAD = {
     'is-top-left':     { x: -5, y: -5 },
@@ -75,6 +75,21 @@
     document.querySelectorAll(BTN_SELECTOR).forEach(initButton);
   }
 
+  // Initial load
   window.addEventListener('load', init);
+
+  // Buttons die später ins DOM kommen (Webflow Page Transitions, CMS)
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll(BTN_SELECTOR).forEach(initButton);
+  });
+
+  // Observer startet sobald body verfügbar ist
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  }
 
 })();
