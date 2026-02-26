@@ -1,1 +1,12 @@
-
+{
+  "name": "gameuivault",
+  "version": "1.4.0",
+  "description": "Custom scripts for gameuivault",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --outfile=dist/main.js --format=iife",
+    "dev":   "esbuild src/index.js --bundle --outfile=dist/main.js --format=iife --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}
