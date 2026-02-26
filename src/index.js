@@ -12,6 +12,7 @@ import './components/search.js';
 import './components/lightbox.js';
 import './components/card-marquee.js';
 import './components/text-scramble.js';
+import './components/back-to-top.js';
 
 // ── Animations ───────────────────────────────────────────────────────────────
 import './animations/button-hover.js';
