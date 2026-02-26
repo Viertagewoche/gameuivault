@@ -16,4 +16,4 @@ import './components/text-scramble.js';
 // ── Animations ───────────────────────────────────────────────────────────────
 import './animations/button-hover.js';
 
-// build trigger
+// build trigger.
