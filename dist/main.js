@@ -839,5 +839,15 @@
       document.querySelectorAll(BTN_SELECTOR).forEach(initButton);
     }
     window.addEventListener("load", init);
+    const observer = new MutationObserver(() => {
+      document.querySelectorAll(BTN_SELECTOR).forEach(initButton);
+    });
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      document.addEventListener("DOMContentLoaded", () => {
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    }
   })();
 })();
